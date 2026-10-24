@@ -8,7 +8,29 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// Enhanced CORS configuration for Vercel frontend, local development, and Render
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (
+      origin === 'https://undo-redo-engine.vercel.app' ||
+      origin.endsWith('.vercel.app') ||
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1') ||
+      origin.includes('onrender.com')
+    ) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 // Path to compiled C++ binary (cross-platform Linux/Windows)
@@ -501,9 +523,9 @@ app.get('/', (req, res) => {
 });
 
 // ==========================================
-// Existing API Routes
+// Dual Routes: Support both /... and /api/...
 // ==========================================
-app.get('/api/health', (req, res) => {
+app.get(['/health', '/api/health'], (req, res) => {
   res.json({
     status: 'ok',
     engineRunning: !!cppProcess && !cppProcess.killed,
@@ -511,14 +533,14 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.get('/api/state', (req, res) => {
+app.get(['/state', '/api/state'], (req, res) => {
   res.json({
     ...currentState,
     logs: telemetryLogs
   });
 });
 
-app.post('/api/push', async (req, res) => {
+app.post(['/push', '/api/push'], async (req, res) => {
   const { value } = req.body;
   const num = parseInt(value, 10);
   if (isNaN(num)) {
@@ -534,25 +556,25 @@ app.post('/api/push', async (req, res) => {
   res.json({ ...result, logs: telemetryLogs });
 });
 
-app.post('/api/pop', async (req, res) => {
+app.post(['/pop', '/api/pop'], async (req, res) => {
   const result = await sendCommand('POP');
   addTelemetryLog('POP', result.message, result.status);
   res.json({ ...result, logs: telemetryLogs });
 });
 
-app.post('/api/undo', async (req, res) => {
+app.post(['/undo', '/api/undo'], async (req, res) => {
   const result = await sendCommand('UNDO');
   addTelemetryLog('UNDO', result.message, result.status);
   res.json({ ...result, logs: telemetryLogs });
 });
 
-app.post('/api/redo', async (req, res) => {
+app.post(['/redo', '/api/redo'], async (req, res) => {
   const result = await sendCommand('REDO');
   addTelemetryLog('REDO', result.message, result.status);
   res.json({ ...result, logs: telemetryLogs });
 });
 
-app.post('/api/reset', async (req, res) => {
+app.post(['/reset', '/api/reset'], async (req, res) => {
   const result = await sendCommand('RESET');
   telemetryLogs = [];
   addTelemetryLog('RESET', 'Stack reset to initial clean state');

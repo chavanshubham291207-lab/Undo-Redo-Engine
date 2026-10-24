@@ -1,0 +1,36 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:match*",
+      "destination": "https://undo-redo-engine.onrender.com/api/:match*"
+    },
+    {
+      "source": "/state",
+      "destination": "https://undo-redo-engine.onrender.com/state"
+    },
+    {
+      "source": "/push",
+      "destination": "https://undo-redo-engine.onrender.com/push"
+    },
+    {
+      "source": "/pop",
+      "destination": "https://undo-redo-engine.onrender.com/pop"
+    },
+    {
+      "source": "/undo",
+      "destination": "https://undo-redo-engine.onrender.com/undo"
+    },
+    {
+      "source": "/redo",
+      "destination": "https://undo-redo-engine.onrender.com/redo"
+    },
+    {
+      "source": "/reset",
+      "destination": "https://undo-redo-engine.onrender.com/reset"
+    },
+    {
+      "source": "/health",
+      "destination": "https://undo-redo-engine.onrender.com/health"
+    }
+  ]
+}

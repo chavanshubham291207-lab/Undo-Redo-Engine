@@ -9,7 +9,14 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true
-      }
+      },
+      '/state': 'http://localhost:5000',
+      '/push': 'http://localhost:5000',
+      '/pop': 'http://localhost:5000',
+      '/undo': 'http://localhost:5000',
+      '/redo': 'http://localhost:5000',
+      '/reset': 'http://localhost:5000',
+      '/health': 'http://localhost:5000'
     }
   }
 });
