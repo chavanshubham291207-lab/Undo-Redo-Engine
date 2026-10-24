@@ -30,6 +30,16 @@ const getApiBase = () => {
 
 const API_BASE = getApiBase();
 
+// Colorful palette mapping matching the StackFlow reference screenshot
+// Top: Vibrant Orange, 2nd: Vibrant Blue, 3rd: Vibrant Green, 4th: Vibrant Purple, 5th: Vibrant Pink/Teal
+const BLOCK_COLORS = [
+  { bg: 'bg-[#f97316]', text: 'text-white', border: 'border-[#ea580c]', shadow: 'shadow-orange-500/20' }, // 1st (TOP)
+  { bg: 'bg-[#2563eb]', text: 'text-white', border: 'border-[#1d4ed8]', shadow: 'shadow-blue-500/20' },   // 2nd
+  { bg: 'bg-[#10b981]', text: 'text-white', border: 'border-[#059669]', shadow: 'shadow-emerald-500/20' },// 3rd
+  { bg: 'bg-[#8b5cf6]', text: 'text-white', border: 'border-[#7c3aed]', shadow: 'shadow-purple-500/20' }, // 4th
+  { bg: 'bg-[#ec4899]', text: 'text-white', border: 'border-[#db2777]', shadow: 'shadow-pink-500/20' }    // 5th
+];
+
 export default function App() {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('theme') || 'light';
@@ -41,7 +51,7 @@ export default function App() {
 
   const [stackData, setStackData] = useState({
     status: 'READY',
-    message: 'Initializing...',
+    message: 'C++ Engine Initialized',
     capacity: 5,
     size: 0,
     undoCount: 0,
@@ -49,14 +59,20 @@ export default function App() {
     stack: [],
     logs: []
   });
+
+  const [lastOperation, setLastOperation] = useState({
+    action: 'INIT',
+    message: 'Push an element below to begin stack operations.',
+    status: 'READY',
+    time: 'Just now'
+  });
   
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [alertInfo, setAlertInfo] = useState(null);
   const [rightPanelTab, setRightPanelTab] = useState('telemetry'); // 'telemetry' | 'memory' | 'diff'
-  const [diffMode, setDiffMode] = useState(true);
   const [showDocModal, setShowDocModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [mobileTab, setMobileTab] = useState('playground'); // 'playground' | 'telemetry'
 
   // Sync theme with HTML class and localStorage
   useEffect(() => {
@@ -84,6 +100,15 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setStackData(data);
+        if (data.stack && data.stack.length > 0) {
+          const topVal = data.stack[data.stack.length - 1];
+          setLastOperation({
+            action: 'STATE',
+            message: `Current stack active with ${data.stack.length} elements (Top: ${topVal}).`,
+            status: 'SUCCESS',
+            time: 'Loaded'
+          });
+        }
       }
     } catch (err) {
       console.warn('Backend not responding yet, will retry:', err);
@@ -97,15 +122,23 @@ export default function App() {
     }, 4500);
   };
 
-  const handlePush = async () => {
-    const val = parseInt(inputValue, 10);
+  const handlePush = async (overrideVal) => {
+    const rawVal = overrideVal !== undefined ? overrideVal : inputValue;
+    const val = parseInt(rawVal, 10);
     if (isNaN(val)) {
       showAlert('ERROR', 'Please enter a valid integer to push');
       return;
     }
 
-    if (stackData.size >= stackData.capacity) {
+    if (stackData.size >= (stackData.capacity || 5)) {
       showAlert('OVERFLOW', '⚠️ Stack Overflow! Maximum capacity (5) reached.');
+      setLastOperation({
+        action: 'PUSH',
+        message: 'Stack Overflow! Maximum capacity (5) reached — element rejected.',
+        status: 'OVERFLOW',
+        time: new Date().toLocaleTimeString()
+      });
+      return;
     }
 
     setLoading(true);
@@ -119,8 +152,20 @@ export default function App() {
       setStackData(data);
       if (data.status === 'OVERFLOW') {
         showAlert('OVERFLOW', '⚠️ Stack Overflow! Element rejected by C++ Engine.');
+        setLastOperation({
+          action: 'PUSH',
+          message: 'Stack Overflow! Maximum capacity (5) reached — element rejected.',
+          status: 'OVERFLOW',
+          time: new Date().toLocaleTimeString()
+        });
       } else if (data.status === 'SUCCESS') {
         showAlert('SUCCESS', `Pushed ${val} to top of stack`);
+        setLastOperation({
+          action: 'PUSH',
+          message: `Push operation successful — ${val} added to the stack.`,
+          status: 'SUCCESS',
+          time: new Date().toLocaleTimeString()
+        });
         setInputValue('');
       }
     } catch (err) {
@@ -133,10 +178,18 @@ export default function App() {
   const handlePop = async () => {
     if (stackData.size === 0) {
       showAlert('UNDERFLOW', '⚠️ Stack Underflow! Stack is already empty.');
+      setLastOperation({
+        action: 'POP',
+        message: 'Stack Underflow! Cannot pop from an empty stack.',
+        status: 'UNDERFLOW',
+        time: new Date().toLocaleTimeString()
+      });
+      return;
     }
 
     setLoading(true);
     try {
+      const poppedVal = stackData.stack && stackData.stack.length > 0 ? stackData.stack[stackData.stack.length - 1] : '';
       const res = await fetch(`${API_BASE}/pop`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
@@ -145,8 +198,20 @@ export default function App() {
       setStackData(data);
       if (data.status === 'UNDERFLOW') {
         showAlert('UNDERFLOW', '⚠️ Stack Underflow! Cannot pop from empty stack.');
+        setLastOperation({
+          action: 'POP',
+          message: 'Stack Underflow! Cannot pop from an empty stack.',
+          status: 'UNDERFLOW',
+          time: new Date().toLocaleTimeString()
+        });
       } else if (data.status === 'SUCCESS') {
         showAlert('SUCCESS', data.message);
+        setLastOperation({
+          action: 'POP',
+          message: `Pop operation successful — deleted element ${poppedVal} from the stack.`,
+          status: 'SUCCESS',
+          time: new Date().toLocaleTimeString()
+        });
       }
     } catch (err) {
       showAlert('ERROR', 'Failed to communicate with backend server');
@@ -170,6 +235,12 @@ export default function App() {
       const data = await res.json();
       setStackData(data);
       showAlert('UNDO', '⏪ Undo performed successfully');
+      setLastOperation({
+        action: 'UNDO',
+        message: 'Undo operation successful — reverted to previous stack state.',
+        status: 'SUCCESS',
+        time: new Date().toLocaleTimeString()
+      });
     } catch (err) {
       showAlert('ERROR', 'Failed to execute undo');
     } finally {
@@ -192,6 +263,12 @@ export default function App() {
       const data = await res.json();
       setStackData(data);
       showAlert('REDO', '⏩ Redo performed successfully');
+      setLastOperation({
+        action: 'REDO',
+        message: 'Redo operation successful — reapplied forward stack state.',
+        status: 'SUCCESS',
+        time: new Date().toLocaleTimeString()
+      });
     } catch (err) {
       showAlert('ERROR', 'Failed to execute redo');
     } finally {
@@ -209,6 +286,12 @@ export default function App() {
       const data = await res.json();
       setStackData(data);
       showAlert('SUCCESS', 'Stack and history reset to initial state');
+      setLastOperation({
+        action: 'RESET',
+        message: 'Stack reset successful — all elements cleared.',
+        status: 'SUCCESS',
+        time: new Date().toLocaleTimeString()
+      });
     } catch (err) {
       showAlert('ERROR', 'Failed to reset stack');
     } finally {
@@ -219,8 +302,6 @@ export default function App() {
   const capacity = stackData.capacity || 5;
   const currentSize = stackData.stack ? stackData.stack.length : 0;
   const freeSlots = Math.max(0, capacity - currentSize);
-  const loadPercentage = Math.round((currentSize / capacity) * 100);
-  const memSavingsPercentage = ((freeSlots / capacity) * 100).toFixed(1);
 
   // Stack elements in display order: Top at index (size-1) down to Bottom at index 0
   const stackElements = [...(stackData.stack || [])];
@@ -230,38 +311,37 @@ export default function App() {
      ========================================================================= */
   if (showWelcome) {
     return (
-      <div className="h-screen max-h-screen flex flex-col justify-between overflow-y-auto md:overflow-hidden bg-surface text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container transition-colors duration-200">
+      <div className="min-h-screen flex flex-col justify-between bg-slate-50 dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 antialiased transition-colors duration-200">
         {/* Welcome Top Navbar */}
-        <header className="h-16 shrink-0 w-full bg-surface-dim backdrop-blur-xl border-b border-surface-container-high/70 px-4 md:px-8 flex items-center justify-between">
+        <header className="h-16 shrink-0 w-full bg-white/80 dark:bg-[#131b2e]/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 md:px-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-container via-primary to-secondary flex items-center justify-center shadow-md shrink-0">
-              <span className="material-symbols-outlined text-surface-dim font-bold text-[24px]">layers</span>
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-500/20 text-white">
+              <span className="material-symbols-outlined text-[24px]">layers</span>
             </div>
             <div className="flex flex-col">
-              <span className="font-code-lg text-[18px] md:text-[20px] text-primary font-bold tracking-tight">
-                Undo–Redo Engine
+              <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+                StackFlow
               </span>
-              <span className="font-body-md text-[13px] md:text-[14px] text-on-surface-variant font-medium">
-                DSA Project • C++ Stack Core
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                Stack Operations Playground
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
               title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              className="w-10 h-10 flex items-center justify-center rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors border border-surface-container-high"
+              className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200 dark:border-slate-800"
             >
-              <span className="material-symbols-outlined text-[22px]">
+              <span className="material-symbols-outlined text-[20px]">
                 {theme === 'dark' ? 'light_mode' : 'dark_mode'}
               </span>
             </button>
 
             <button
               onClick={handleGetStarted}
-              className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary font-code-sm text-[15px] font-bold shadow-md hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-md shadow-blue-500/20 transition-all cursor-pointer"
             >
               <span>Get Started</span>
               <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
@@ -270,255 +350,124 @@ export default function App() {
         </header>
 
         {/* Central Viewport Content */}
-        <main className="flex-1 flex flex-col justify-center items-center px-4 md:px-8 py-4 max-w-4xl mx-auto w-full gap-4 my-auto">
-          {/* Top Project Tag */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-container-high/80 border border-primary/30 text-primary font-mono text-[13px] md:text-[14px] font-semibold tracking-wider uppercase shadow-sm">
-            <span className="w-2.5 h-2.5 rounded-full bg-secondary shadow-[0_0_8px_#0891b2] animate-pulse"></span>
-            <span>Data Structures &amp; Algorithms Project</span>
-            <span className="text-outline">•</span>
-            <span className="text-secondary font-mono font-bold">O(1) OPT</span>
+        <main className="flex-1 flex flex-col justify-center items-center px-4 py-8 max-w-4xl mx-auto w-full gap-5">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-semibold uppercase tracking-wider">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse"></span>
+            <span>Data Structures &amp; Algorithms Engine</span>
+            <span>•</span>
+            <span className="font-bold">O(1) C++ Core</span>
           </div>
 
-          {/* Title & Short Description */}
           <div className="text-center max-w-2xl">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-on-surface leading-tight">
-              Memory-Efficient <br className="hidden sm:inline"/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-secondary to-primary">
-                Undo–Redo Engine
-              </span>
+            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
+              Memory-Efficient <br/>
+              <span className="text-blue-600 dark:text-blue-400">StackFlow Engine</span>
             </h1>
-            <p className="mt-3 text-[16px] sm:text-[17px] md:text-[18px] text-on-surface-variant leading-relaxed font-body-md">
+            <p className="mt-3 text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
               Interactive visualization of reversible state management. Built on contiguous C++ stack logic 
-              with $O(1)$ operations, dual history branches, and strict capacity bounds.
+              with $O(1)$ operations, dual history branches, and strict 5-slot capacity bounds.
             </p>
           </div>
 
-          {/* Stack Illustration Container */}
-          <div className="w-full max-w-xl bg-surface-container rounded-2xl p-4 md:p-5 border border-surface-container-high shadow-lg relative overflow-hidden">
-            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary via-secondary to-primary"></div>
-            
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-surface-container-high">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-secondary text-[22px]">account_tree</span>
-                <span className="font-code-lg text-[16px] md:text-[17px] font-bold text-on-surface">
-                  Contiguous Stack Illustration
-                </span>
-              </div>
-              <span className="text-[13px] font-mono px-3 py-1 rounded-md bg-surface-container-highest text-primary font-bold">
-                CAPACITY = 5
+          {/* Quick Preview Card */}
+          <div className="w-full max-w-md bg-white dark:bg-[#131b2e] rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-xl space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">Interactive Stack Tube</span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                Ready
               </span>
             </div>
 
-            {/* Visual Stack Graphic */}
-            <div className="grid grid-cols-3 gap-3.5 items-center">
-              {/* Left Column: PUSH Inflow */}
-              <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-surface-container-low border border-surface-container-high text-center">
-                <span className="material-symbols-outlined text-primary text-[28px]">add_circle</span>
-                <span className="font-code-sm text-[14px] font-bold text-on-surface mt-1">PUSH(x)</span>
-                <span className="font-label-xs text-[12px] text-on-surface-variant font-mono mt-0.5">Clears redo</span>
-                <div className="mt-2 flex items-center gap-1.5 text-primary text-[12px] font-mono font-bold">
-                  <span>Inflow</span>
-                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                </div>
+            <div className="space-y-2">
+              <div className="p-3.5 rounded-xl bg-[#f97316] text-white flex items-center justify-between font-bold text-lg shadow-sm">
+                <span>30</span>
+                <span className="text-xs bg-white/20 px-2 py-0.5 rounded uppercase">TOP</span>
               </div>
-
-              {/* Center Column: Stack Tube */}
-              <div className="flex flex-col gap-1.5 p-2.5 rounded-xl bg-surface-container-lowest border border-dashed border-outline-variant">
-                <div className="flex items-center justify-between px-2.5 py-1 rounded bg-surface-container-high/40 text-outline text-[12px] font-mono border border-dashed border-outline-variant font-medium">
-                  <span>Slot #4..5 Free</span>
-                  <span>2 free</span>
-                </div>
-
-                {/* Top Node */}
-                <div className="flex flex-col px-3 py-2 rounded-lg bg-surface-container-high shadow-sm border-2 border-primary/60">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] font-mono text-primary font-bold flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">arrow_drop_down</span>
-                      TOP [idx=2]
-                    </span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/20 text-primary font-bold">ACTIVE</span>
-                  </div>
-                  <span className="font-mono text-[14px] font-bold text-on-surface mt-0.5">Node #3 (42)</span>
-                </div>
-
-                {/* Middle Node */}
-                <div className="px-3 py-1.5 rounded-lg bg-surface-container-low border border-surface-container-high font-mono text-[13px] text-on-surface-variant font-medium">
-                  Node #2 (25)
-                </div>
-
-                {/* Bottom Node */}
-                <div className="flex flex-col px-3 py-2 rounded-lg bg-surface-container-high border-2 border-secondary/50">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] font-mono text-secondary font-bold flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">arrow_drop_up</span>
-                      BOTTOM
-                    </span>
-                    <span className="text-[10px] font-mono text-outline">Anchor</span>
-                  </div>
-                  <span className="font-mono text-[14px] font-bold text-on-surface mt-0.5">Node #1 (10)</span>
-                </div>
+              <div className="p-3.5 rounded-xl bg-[#2563eb] text-white font-bold text-lg shadow-sm">
+                <span>20</span>
               </div>
-
-              {/* Right Column: Dual Reversible Stacks */}
-              <div className="flex flex-col gap-2.5">
-                <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-surface-container-low border border-secondary/30">
-                  <span className="material-symbols-outlined text-secondary text-[22px]">undo</span>
-                  <div className="flex flex-col text-left">
-                    <span className="font-code-sm text-[13px] font-bold text-on-surface">undoStack</span>
-                    <span className="text-[11px] font-mono text-on-surface-variant">Reversible history</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-surface-container-low border border-tertiary/30">
-                  <span className="material-symbols-outlined text-tertiary text-[22px]">redo</span>
-                  <div className="flex flex-col text-left">
-                    <span className="font-code-sm text-[13px] font-bold text-on-surface">redoStack</span>
-                    <span className="text-[11px] font-mono text-on-surface-variant">Forward branch</span>
-                  </div>
-                </div>
+              <div className="p-3.5 rounded-xl bg-[#10b981] text-white font-bold text-lg shadow-sm">
+                <span>10</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 text-center font-semibold text-xs border border-slate-200 dark:border-slate-700">
+                Bottom of stack
               </div>
             </div>
-          </div>
 
-          {/* CTA "Get Started" Button */}
-          <div className="flex flex-col items-center gap-2 mt-1">
             <button
               onClick={handleGetStarted}
-              className="flex items-center justify-center gap-2 px-10 py-4 rounded-xl bg-primary text-on-primary font-code-sm text-[17px] font-bold shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+              className="w-full mt-3 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-base shadow-md shadow-blue-500/25 transition-all cursor-pointer"
             >
-              <span>Get Started</span>
-              <span className="material-symbols-outlined text-[22px]">rocket_launch</span>
+              Open StackFlow Dashboard
             </button>
-            <span className="text-[13px] md:text-[14px] font-mono text-outline">
-              Fixed Capacity = 5 • Protected against Overflow &amp; Underflow
-            </span>
           </div>
         </main>
 
-        {/* Footer */}
-        <footer className="h-10 shrink-0 flex items-center justify-center text-[13px] font-mono text-outline border-t border-surface-container-high/50">
-          <span>DSA Project — Memory-Efficient Undo–Redo Engine (React + Node.js + C++)</span>
+        <footer className="py-4 text-center text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200 dark:border-slate-800">
+          Memory-Efficient Undo–Redo Engine • React + Node.js + C++
         </footer>
-
-        {/* Modals */}
-        {showDocModal && renderDocModal()}
       </div>
     );
   }
 
   /* =========================================================================
-     2. REUSABLE MODALS
+     2. REUSABLE MODAL
      ========================================================================= */
   function renderDocModal() {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-pop-in">
-        <div className="bg-surface-container border border-surface-container-high rounded-2xl max-w-xl w-full p-6 md:p-8 shadow-2xl">
-          <div className="flex items-center justify-between pb-4 border-b border-surface-container-high">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-pop-in">
+        <div className="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
             <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-primary text-[26px]">menu_book</span>
-              <h3 className="text-[22px] font-bold text-on-surface">DSA Project Architecture</h3>
+              <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[20px]">layers</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white">StackFlow Architecture</h3>
             </div>
             <button
               onClick={() => setShowDocModal(false)}
-              className="text-on-surface-variant hover:text-on-surface p-1"
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1"
             >
-              <span className="material-symbols-outlined text-[24px]">close</span>
+              <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
           </div>
           
-          <div className="py-5 space-y-4 font-mono text-[15px] md:text-[16px] text-on-surface-variant leading-relaxed max-h-[60vh] overflow-y-auto">
+          <div className="py-5 space-y-4 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
             <p>
-              <strong>Engine:</strong> Memory-Efficient Undo–Redo Engine using contiguous C++ <code className="text-primary font-bold">vector&lt;int&gt;</code> and dual <code className="text-secondary font-bold">stack&lt;vector&lt;int&gt;&gt;</code>.
+              <strong>Data Structure:</strong> Native C++ Vector Stack with dual history stacks for state preservation.
             </p>
-            <div className="p-4 bg-surface-container-low rounded-xl border border-surface-container-high text-[14px] md:text-[15px] space-y-1.5">
-              <div className="text-primary font-bold mb-2">C++ Core Data Structures:</div>
-              <div>• Main Stack: <span className="text-on-surface font-semibold">vector&lt;int&gt; s;</span> (Capacity = 5)</div>
-              <div>• Undo History: <span className="text-on-surface font-semibold">stack&lt;vector&lt;int&gt;&gt; undoStack;</span></div>
-              <div>• Redo Branch: <span className="text-on-surface font-semibold">stack&lt;vector&lt;int&gt;&gt; redoStack;</span></div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5 font-mono text-xs">
+              <div className="text-blue-600 dark:text-blue-400 font-bold mb-1">C++ Core Data Structures:</div>
+              <div>• vector&lt;int&gt; s; // Capacity = 5</div>
+              <div>• stack&lt;vector&lt;int&gt;&gt; undoStack;</div>
+              <div>• stack&lt;vector&lt;int&gt;&gt; redoStack;</div>
             </div>
-            <p>
-              <strong>Time Complexities:</strong>
-              <br/>• Push: <span className="text-secondary font-bold">O(1)</span> amortized
-              <br/>• Pop: <span className="text-secondary font-bold">O(1)</span>
-              <br/>• Undo / Redo: <span className="text-secondary font-bold">O(1)</span> state restore
-            </p>
+            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+              <div className="p-2.5 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-900">
+                <div className="text-blue-700 dark:text-blue-300 font-bold">Push: O(1)</div>
+                <div className="text-slate-500">Amortized vector push</div>
+              </div>
+              <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-900">
+                <div className="text-emerald-700 dark:text-emerald-300 font-bold">Pop: O(1)</div>
+                <div className="text-slate-500">Instant vector pop</div>
+              </div>
+              <div className="p-2.5 bg-purple-50 dark:bg-purple-950/40 rounded-xl border border-purple-200 dark:border-purple-900">
+                <div className="text-purple-700 dark:text-purple-300 font-bold">Undo: O(1)</div>
+                <div className="text-slate-500">Vector swap restore</div>
+              </div>
+              <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-900">
+                <div className="text-amber-700 dark:text-amber-300 font-bold">Redo: O(1)</div>
+                <div className="text-slate-500">Forward branch swap</div>
+              </div>
+            </div>
           </div>
 
-          <div className="pt-4 border-t border-surface-container-high flex justify-end">
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
             <button
               onClick={() => setShowDocModal(false)}
-              className="px-6 py-2.5 rounded-xl bg-primary text-on-primary font-code-sm text-[16px] font-bold"
+              className="px-5 py-2 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700"
             >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  function renderSettingsModal() {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-pop-in">
-        <div className="bg-surface-container border border-surface-container-high rounded-2xl max-w-lg w-full p-6 md:p-8 shadow-2xl">
-          <div className="flex items-center justify-between pb-4 border-b border-surface-container-high">
-            <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-secondary text-[26px]">settings</span>
-              <h3 className="text-[22px] font-bold text-on-surface">Engine Settings</h3>
-            </div>
-            <button
-              onClick={() => setShowSettingsModal(false)}
-              className="text-on-surface-variant hover:text-on-surface p-1"
-            >
-              <span className="material-symbols-outlined text-[24px]">close</span>
-            </button>
-          </div>
-
-          <div className="py-5 space-y-4 font-mono text-[15px] md:text-[16px]">
-            <div className="flex items-center justify-between p-2 rounded-lg bg-surface-container-low">
-              <span>Theme Mode</span>
-              <button
-                onClick={toggleTheme}
-                className="px-3.5 py-1.5 rounded-lg bg-surface-container-high text-primary font-bold flex items-center gap-2 text-[15px]"
-              >
-                <span className="material-symbols-outlined text-[18px]">
-                  {theme === 'dark' ? 'dark_mode' : 'light_mode'}
-                </span>
-                <span className="capitalize">{theme} Mode</span>
-              </button>
-            </div>
-            <div className="flex items-center justify-between p-2 rounded-lg bg-surface-container-low">
-              <span>Stack Capacity</span>
-              <span className="px-3 py-1 rounded bg-surface-container-high text-primary font-bold">5 Elements</span>
-            </div>
-            <div className="flex items-center justify-between p-2 rounded-lg bg-surface-container-low">
-              <span>C++ Engine</span>
-              <span className="text-secondary font-bold">engine.exe (MinGW)</span>
-            </div>
-            <div className="flex items-center justify-between p-2 rounded-lg bg-surface-container-low">
-              <span>Backend Endpoint</span>
-              <span className="text-on-surface-variant">http://localhost:5000</span>
-            </div>
-
-            <div className="pt-2">
-              <button
-                onClick={() => {
-                  handleReset();
-                  setShowSettingsModal(false);
-                }}
-                className="w-full py-3.5 rounded-xl bg-error-container text-on-error-container font-bold text-[16px] hover:bg-error-container/80 transition-colors"
-              >
-                Reset C++ Engine State
-              </button>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-surface-container-high flex justify-end">
-            <button
-              onClick={() => setShowSettingsModal(false)}
-              className="px-6 py-2.5 rounded-xl bg-surface-container-high text-on-surface font-code-sm text-[16px] font-bold"
-            >
-              Done
+              Got it
             </button>
           </div>
         </div>
@@ -527,564 +476,513 @@ export default function App() {
   }
 
   /* =========================================================================
-     3. HIGH READABILITY DASHBOARD (Side-by-Side: Left Controls | Right Telemetry)
+     3. STACKFLOW MAIN DASHBOARD
      ========================================================================= */
   return (
-    <div className="min-h-screen flex flex-col bg-surface font-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container transition-colors duration-200">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 antialiased transition-colors duration-200">
       
-      {/* Top Navigation Bar */}
-      <header className="h-16 shrink-0 w-full bg-surface-dim backdrop-blur-xl shadow-sm border-b border-surface-container-high px-4 md:px-8 flex items-center justify-between sticky top-0 z-30">
+      {/* Top Navbar */}
+      <header className="h-16 shrink-0 w-full bg-white/90 dark:bg-[#131b2e]/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+        {/* Left Branding */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-container via-primary to-secondary flex items-center justify-center shadow-md shrink-0">
-            <span className="material-symbols-outlined text-surface-dim font-bold text-[24px]">layers</span>
+          <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
+            <span className="material-symbols-outlined text-[24px]">layers</span>
           </div>
-          <div className="flex items-center gap-2.5">
-            <span className="font-code-lg text-[19px] md:text-[22px] text-primary font-bold tracking-tight">
-              Undo–Redo Engine
-            </span>
-            <span className="hidden sm:inline-block px-2.5 py-1 rounded-md bg-surface-container-high text-secondary font-mono text-[12px] font-bold uppercase tracking-wider">
-              C++ Stack Core (O(1))
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                StackFlow
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 text-xs font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Ready
+              </span>
+            </div>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:inline">
+              Stack Operations Playground • C++ Core
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          {/* Quick Engine Status Indicator */}
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-container-low text-on-surface-variant font-mono text-[14px] border border-surface-container-high font-medium mr-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-secondary shadow-[0_0_8px_#0891b2] animate-pulse"></span>
-            <span>Capacity Limit: <strong className="text-on-surface">5 Slots</strong></span>
+        {/* Right Controls */}
+        <div className="flex items-center gap-2">
+          {/* Mobile Tab Switcher */}
+          <div className="flex lg:hidden bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+            <button
+              onClick={() => setMobileTab('playground')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                mobileTab === 'playground'
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-500'
+              }`}
+            >
+              Playground
+            </button>
+            <button
+              onClick={() => setMobileTab('telemetry')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                mobileTab === 'telemetry'
+                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-xs'
+                  : 'text-slate-500'
+              }`}
+            >
+              Telemetry
+            </button>
           </div>
+
+          {/* Quick Reset Stack Button */}
+          <button
+            onClick={handleReset}
+            title="Reset Stack to Initial Clean State"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors border border-slate-200 dark:border-slate-800 text-xs font-bold cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">refresh</span>
+            <span className="hidden sm:inline">Reset</span>
+          </button>
+
+          {/* Docs Modal Button */}
+          <button
+            onClick={() => setShowDocModal(true)}
+            title="View DSA Architecture"
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[20px]">menu_book</span>
+          </button>
 
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
             title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            className="w-10 h-10 flex items-center justify-center rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors border border-surface-container-high"
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[22px]">
+            <span className="material-symbols-outlined text-[20px]">
               {theme === 'dark' ? 'light_mode' : 'dark_mode'}
             </span>
-          </button>
-
-          <button
-            onClick={() => setShowDocModal(true)}
-            title="DSA Documentation & C++ Code"
-            className="w-10 h-10 flex items-center justify-center rounded-xl text-on-surface-variant hover:text-secondary hover:bg-surface-container-high transition-colors border border-surface-container-high"
-          >
-            <span className="material-symbols-outlined text-[22px]">menu_book</span>
-          </button>
-
-          <button
-            onClick={() => setShowSettingsModal(true)}
-            title="Engine Settings & Reset"
-            className="w-10 h-10 flex items-center justify-center rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors border border-surface-container-high"
-          >
-            <span className="material-symbols-outlined text-[22px]">settings</span>
           </button>
         </div>
       </header>
 
-      {/* Main Dashboard Body */}
-      <main className="flex-1 flex flex-col p-4 md:p-6 lg:p-8 gap-5 max-w-[1600px] mx-auto w-full">
+      {/* Main Container */}
+      <main className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">
         
-        {/* Top Alert Toast Notification */}
+        {/* Toast Alert */}
         {alertInfo && (
           <div
-            className={`shrink-0 flex items-center justify-between px-4 py-3 rounded-xl border animate-slide-down shadow-md ${
+            className={`mb-5 flex items-center justify-between px-4 py-3 rounded-2xl border animate-slide-down shadow-md ${
               alertInfo.type === 'OVERFLOW' || alertInfo.type === 'UNDERFLOW' || alertInfo.type === 'ERROR'
-                ? 'bg-error-container text-on-error-container border-error/50 font-semibold text-[15px]'
-                : alertInfo.type === 'UNDO' || alertInfo.type === 'REDO'
-                ? 'bg-secondary/15 border-secondary/40 text-secondary text-[15px] font-semibold'
-                : 'bg-primary/15 border-primary/40 text-primary text-[15px] font-semibold'
+                ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900'
+                : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-[24px]">
-                {alertInfo.type === 'OVERFLOW' || alertInfo.type === 'UNDERFLOW' ? 'warning' : 'info'}
+              <span className="material-symbols-outlined text-[22px]">
+                {alertInfo.type === 'OVERFLOW' || alertInfo.type === 'UNDERFLOW' ? 'warning' : 'check_circle'}
               </span>
-              <span className="font-code-sm text-[16px]">{alertInfo.message}</span>
+              <span className="text-sm font-semibold">{alertInfo.message}</span>
             </div>
             <button
               onClick={() => setAlertInfo(null)}
-              className="text-current opacity-70 hover:opacity-100 p-1"
+              className="opacity-70 hover:opacity-100 p-1 cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[20px]">close</span>
+              <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
           </div>
         )}
 
-        {/* Prominent Statistics Row (4 Bento Cards) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Stack Load */}
-          <div className="flex flex-col p-4 md:p-5 rounded-2xl bg-surface-container border border-surface-container-high shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="font-mono text-[14px] uppercase font-bold text-on-surface-variant tracking-wider">
-                Stack Load
-              </span>
-              <span className="material-symbols-outlined text-primary text-[22px]">layers</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-[28px] md:text-[34px] font-extrabold text-primary font-mono leading-none">
-                {currentSize}
-              </span>
-              <span className="text-[16px] md:text-[18px] text-outline font-mono">/ {capacity} slots</span>
-            </div>
-            <div className="w-full bg-surface-container-high rounded-full h-2 mt-3 overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-300 ${
-                  currentSize === capacity ? 'bg-error' : 'bg-primary'
-                }`}
-                style={{ width: `${loadPercentage}%` }}
-              ></div>
-            </div>
-          </div>
-
-          {/* Card 2: Buffer Free */}
-          <div className="flex flex-col p-4 md:p-5 rounded-2xl bg-surface-container border border-surface-container-high shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="font-mono text-[14px] uppercase font-bold text-on-surface-variant tracking-wider">
-                Buffer Free
-              </span>
-              <span className="material-symbols-outlined text-secondary text-[22px]">compress</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-[28px] md:text-[34px] font-extrabold text-secondary font-mono leading-none">
-                {memSavingsPercentage}%
-              </span>
-              <span className="text-[15px] md:text-[16px] text-outline font-mono font-medium">({freeSlots} free)</span>
-            </div>
-            <span className="text-[14px] text-on-surface-variant font-mono mt-2 font-medium truncate">
-              {freeSlots > 0 ? `${freeSlots} unallocated slots` : 'Stack capacity reached'}
-            </span>
-          </div>
-
-          {/* Card 3: Undo Depth */}
-          <div className="flex flex-col p-4 md:p-5 rounded-2xl bg-surface-container border border-surface-container-high shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="font-mono text-[14px] uppercase font-bold text-on-surface-variant tracking-wider">
-                Undo Depth
-              </span>
-              <span className="material-symbols-outlined text-tertiary text-[22px]">undo</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-[28px] md:text-[34px] font-extrabold text-on-surface font-mono leading-none">
-                {stackData.undoCount}
-              </span>
-              <span className="text-[15px] md:text-[16px] text-on-surface-variant font-medium">states stored</span>
-            </div>
-            <span className="text-[14px] text-tertiary font-mono mt-2 font-medium">
-              {stackData.undoCount > 0 ? 'Reversible snapshots' : 'Genesis baseline state'}
-            </span>
-          </div>
-
-          {/* Card 4: Redo Branch */}
-          <div className="flex flex-col p-4 md:p-5 rounded-2xl bg-surface-container border border-surface-container-high shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="font-mono text-[14px] uppercase font-bold text-on-surface-variant tracking-wider">
-                Redo Branch
-              </span>
-              <span className="material-symbols-outlined text-outline text-[22px]">redo</span>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-[28px] md:text-[34px] font-extrabold text-on-surface font-mono leading-none">
-                {stackData.redoCount}
-              </span>
-              <span className="text-[15px] md:text-[16px] text-on-surface-variant font-medium">forward cached</span>
-            </div>
-            <span className="text-[14px] text-outline font-mono mt-2 font-medium">
-              {stackData.redoCount > 0 ? 'Forward steps available' : 'No forward state cached'}
-            </span>
-          </div>
-        </div>
-
-        {/* Split Section: LEFT (Stack Visualizer & Controls) | RIGHT (Telemetry Log) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
-          {/* =========================================================
-              LEFT COLUMN: Stack Visualizer + Command Controls (7 cols)
-              ========================================================= */}
-          <div className="lg:col-span-7 flex flex-col gap-5">
+          {/* =================================================================
+              PRIMARY COLUMN: The StackFlow Playground (Matches Reference Screenshot)
+              ================================================================= */}
+          <div className={`lg:col-span-7 flex flex-col gap-6 ${mobileTab !== 'playground' ? 'hidden lg:flex' : 'flex'}`}>
             
-            {/* Contiguous Stack Visualizer Card */}
-            <div className="flex flex-col p-5 md:p-6 rounded-2xl bg-surface-container border border-surface-container-high shadow-sm relative">
-              <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-surface-container-high">
-                <div className="flex items-center gap-2.5">
-                  <span className="material-symbols-outlined text-primary text-[24px]">account_tree</span>
-                  <span className="text-[22px] md:text-[24px] text-on-surface font-bold tracking-tight">
-                    Contiguous Stack Tube
-                  </span>
+            {/* Top 3 Statistic Cards */}
+            <div className="grid grid-cols-3 gap-3 sm:gap-4">
+              
+              {/* Card 1: Stack Size */}
+              <div className="bg-[#eff6ff] dark:bg-[#1e293b]/80 border border-[#dbeafe] dark:border-[#334155] rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between shadow-xs transition-all">
+                <div className="text-blue-600 dark:text-blue-400 mb-2">
+                  <span className="material-symbols-outlined text-[24px] sm:text-[28px]">layers</span>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-surface-container-high text-primary font-mono text-[13px] font-bold">
-                  <span>PTR:</span>
-                  <span className="text-on-surface">0x03FF{currentSize ? currentSize.toString(16).toUpperCase() : '0'}B</span>
+                <div>
+                  <div className="text-2xl sm:text-4xl font-extrabold text-[#1d4ed8] dark:text-[#93c5fd] tracking-tight">
+                    {currentSize}
+                  </div>
+                  <div className="text-xs sm:text-sm font-bold text-blue-700 dark:text-blue-300 mt-1">
+                    Stack Size
+                  </div>
                 </div>
               </div>
 
-              {/* The Vertical Stack Elements Tube */}
-              <div className="flex flex-col gap-2.5 p-2">
-                {/* Empty Buffer Slot Indicator */}
-                {freeSlots > 0 && (
-                  <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-surface-container-low border border-dashed border-outline-variant text-outline text-[14px] font-mono font-medium">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[18px]">more_vert</span>
-                      <span>[Slot #{currentSize + 1}..{capacity}] Unallocated Capacity Buffer</span>
-                    </div>
-                    <span className="font-bold text-[14px]">{freeSlots} free slots</span>
+              {/* Card 2: Undo Available */}
+              <div className="bg-[#f0fdf4] dark:bg-[#064e3b]/40 border border-[#bbf7d0] dark:border-[#065f46] rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between shadow-xs transition-all">
+                <div className="text-emerald-600 dark:text-emerald-400 mb-2">
+                  <span className="material-symbols-outlined text-[24px] sm:text-[28px]">undo</span>
+                </div>
+                <div>
+                  <div className="text-2xl sm:text-4xl font-extrabold text-[#15803d] dark:text-[#86efac] tracking-tight">
+                    {stackData.undoCount}
                   </div>
-                )}
-
-                {/* Empty Stack State */}
-                {currentSize === 0 && (
-                  <div className="flex flex-col items-center justify-center p-10 text-center rounded-xl bg-surface-container-low/50 border border-dashed border-outline-variant">
-                    <span className="material-symbols-outlined text-outline text-[42px] mb-2">layers_clear</span>
-                    <span className="text-[18px] text-on-surface font-bold">Stack is currently empty</span>
-                    <span className="text-[15px] text-on-surface-variant mt-1">Enter an integer in the Command Dispatcher below and click Push</span>
+                  <div className="text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-300 mt-1">
+                    Undo Available
                   </div>
-                )}
+                </div>
+              </div>
 
-                {/* Render Stack Blocks from TOP (idx = size - 1) to BOTTOM (0) */}
-                {stackElements.slice().reverse().map((val, revIdx) => {
-                  const actualIdx = stackElements.length - 1 - revIdx;
-                  const isTop = actualIdx === stackElements.length - 1;
-                  const isBottom = actualIdx === 0;
+              {/* Card 3: Redo Available */}
+              <div className="bg-[#faf5ff] dark:bg-[#3b0764]/40 border border-[#f3e8ff] dark:border-[#581c87] rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between shadow-xs transition-all">
+                <div className="text-purple-600 dark:text-purple-400 mb-2">
+                  <span className="material-symbols-outlined text-[24px] sm:text-[28px]">redo</span>
+                </div>
+                <div>
+                  <div className="text-2xl sm:text-4xl font-extrabold text-[#7e22ce] dark:text-[#d8b4fe] tracking-tight">
+                    {stackData.redoCount}
+                  </div>
+                  <div className="text-xs sm:text-sm font-bold text-purple-700 dark:text-purple-300 mt-1">
+                    Redo Available
+                  </div>
+                </div>
+              </div>
 
-                  return (
-                    <React.Fragment key={`node-${actualIdx}-${val}`}>
-                      {revIdx > 0 && (
-                        <div className="flex justify-center -my-1 z-10">
-                          <div className="w-1 h-3 bg-primary/40 rounded-full"></div>
-                        </div>
-                      )}
+            </div>
 
-                      <div className="relative group">
-                        {/* TOP Pointer Label */}
+            {/* Stack Visualization Card */}
+            <div className="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-5">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white leading-tight">
+                    Stack<br/>Visualization
+                  </h2>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono text-xs font-bold tracking-wider">
+                  LIFO
+                </span>
+              </div>
+
+              {/* Stack Elements Container */}
+              <div className="flex flex-col gap-2.5 min-h-[160px] justify-end">
+                
+                {/* Empty State */}
+                {currentSize === 0 ? (
+                  <div className="py-8 px-4 text-center rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
+                    <span className="material-symbols-outlined text-[36px] mb-2 text-slate-300 dark:text-slate-600">layers_clear</span>
+                    <span className="text-sm font-bold text-slate-600 dark:text-slate-400">Stack is empty</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Use the Push button below to add elements (up to 5)</span>
+                  </div>
+                ) : (
+                  /* Render Stack Blocks from TOP to BOTTOM */
+                  stackElements.slice().reverse().map((val, revIdx) => {
+                    const isTop = revIdx === 0;
+                    const colorScheme = BLOCK_COLORS[revIdx % BLOCK_COLORS.length];
+
+                    return (
+                      <div
+                        key={`stack-node-${revIdx}-${val}`}
+                        className={`w-full py-3.5 px-5 rounded-2xl ${colorScheme.bg} ${colorScheme.text} ${colorScheme.shadow} flex items-center justify-between font-bold text-xl sm:text-2xl transition-all shadow-md transform hover:-translate-y-0.5`}
+                      >
+                        <span className="tracking-tight font-extrabold">{val}</span>
                         {isTop && (
-                          <div className="flex items-center gap-2 mb-1.5 pl-1">
-                            <span className="text-primary font-bold uppercase tracking-wider flex items-center font-mono text-[14px]">
-                              <span className="material-symbols-outlined text-[18px]">arrow_drop_down</span>
-                              TOP [Head Pointer: idx={actualIdx}]
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md bg-primary/20 text-primary font-mono text-[12px] font-bold">
-                              ACTIVE
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Large, Substantial Stack Block */}
-                        <div
-                          className={`flex items-center justify-between p-4 md:p-5 rounded-xl transition-all border-2 ${
-                            isTop
-                              ? 'bg-surface-container-high shadow-md border-primary/70'
-                              : isBottom
-                              ? 'bg-surface-container-high border-secondary/60 shadow-sm'
-                              : 'bg-surface-container-low border-surface-container-high'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3.5 min-w-0">
-                            <span
-                              className={`w-3.5 h-3.5 rounded-full shrink-0 ${
-                                isTop ? 'bg-primary shadow-[0_0_10px_#7c3aed]' : isBottom ? 'bg-secondary shadow-[0_0_8px_#0891b2]' : 'bg-outline'
-                              }`}
-                            ></span>
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2">
-                                <span className={`text-[17px] md:text-[19px] font-bold ${
-                                  isTop ? 'text-primary' : isBottom ? 'text-secondary' : 'text-on-surface'
-                                }`}>
-                                  Node #{actualIdx + 1}
-                                </span>
-                                <span className="text-[12px] font-mono text-on-surface-variant bg-surface-container px-2 py-0.5 rounded font-semibold border border-surface-container-high">
-                                  {isBottom ? 'Baseline' : 'Delta'}
-                                </span>
-                              </div>
-                              <div className="text-[18px] md:text-[20px] font-mono text-on-surface font-semibold mt-0.5">
-                                val = <strong className="text-secondary font-black text-[20px] md:text-[22px]">{val}</strong>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col items-end gap-1 text-[13px] md:text-[14px] font-mono text-outline shrink-0">
-                            <span>HASH: {((val * 7919) % 65535).toString(16).toUpperCase().padStart(4, '0')}</span>
-                            <span className="text-secondary font-bold">{isBottom ? '1.2 KB full' : '+48 B [O(1)]'}</span>
-                          </div>
-                        </div>
-
-                        {/* BOTTOM Anchor Label */}
-                        {isBottom && (
-                          <div className="flex items-center justify-between mt-1.5 pl-1">
-                            <span className="text-secondary font-bold uppercase tracking-wider flex items-center font-mono text-[14px]">
-                              <span className="material-symbols-outlined text-[18px]">arrow_drop_up</span>
-                              BOTTOM [Base Anchor: idx=0]
-                            </span>
-                            <span className="text-[13px] font-mono text-outline font-medium">Immutable Genesis Base</span>
-                          </div>
+                          <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-white/95 bg-black/15 px-2.5 py-1 rounded-lg">
+                            TOP
+                          </span>
                         )}
                       </div>
-                    </React.Fragment>
-                  );
-                })}
+                    );
+                  })
+                )}
+
+                {/* Bottom of Stack Label */}
+                <div className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 text-center font-bold text-xs sm:text-sm border border-slate-200/60 dark:border-slate-700/60 mt-1">
+                  Bottom of stack
+                </div>
+
+                {/* Caption Underneath */}
+                <p className="text-center text-xs text-slate-400 dark:text-slate-500 font-medium mt-2">
+                  Elements are displayed from top to bottom.
+                </p>
               </div>
             </div>
 
-            {/* Command Dispatcher Controls */}
-            <div className="p-5 md:p-6 rounded-2xl bg-surface-container border border-surface-container-high shadow-sm flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[18px] md:text-[20px] font-bold text-on-surface tracking-tight">
-                  Command Dispatcher
-                </span>
-                
-                <div className="flex items-center gap-2.5">
-                  <button
-                    onClick={() => setDiffMode(!diffMode)}
-                    className={`px-3 py-1 rounded-lg font-mono text-[13px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
-                      diffMode
-                        ? 'bg-secondary/15 text-secondary border border-secondary/40'
-                        : 'bg-surface-container-high text-outline'
-                    }`}
-                  >
-                    <span className={`w-2 h-2 rounded-full ${diffMode ? 'bg-secondary' : 'bg-outline'}`}></span>
-                    <span>Diff: {diffMode ? 'ON' : 'OFF'}</span>
-                  </button>
+            {/* Perform an operation Card */}
+            <div className="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col gap-4">
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+                Perform an operation
+              </h3>
 
-                  <button
-                    onClick={handleReset}
-                    className="px-3 py-1 rounded-lg bg-error-container text-on-error-container font-mono text-[13px] font-bold flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-opacity"
-                    title="Reset Stack"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">refresh</span>
-                    <span>Reset Stack</span>
-                  </button>
+              {/* Push Integer Input */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                  <span className="material-symbols-outlined text-slate-400 text-[20px] mr-2.5">terminal</span>
+                  <input
+                    type="number"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handlePush();
+                    }}
+                    placeholder="Enter an integer to push (e.g. 30)..."
+                    className="w-full bg-transparent text-sm sm:text-base font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none"
+                  />
+                  {inputValue && (
+                    <button
+                      onClick={() => setInputValue('')}
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer"
+                      title="Clear"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">cancel</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Quick Integer Presets */}
+                <div className="flex items-center gap-1.5 flex-wrap text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  <span className="text-[11px] uppercase tracking-wider text-slate-400">Quick:</span>
+                  {[10, 20, 30, 42, 99].map((preset) => (
+                    <button
+                      key={preset}
+                      onClick={() => handlePush(preset)}
+                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-950 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer border border-slate-200 dark:border-slate-700"
+                    >
+                      +{preset}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Large Input Box */}
-              <div className="flex items-center px-4 py-3 rounded-xl bg-surface-container-low border border-surface-container-high focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-                <span className="material-symbols-outlined text-outline text-[22px] mr-3">terminal</span>
-                <input
-                  type="number"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handlePush();
-                  }}
-                  placeholder="Enter integer payload to push (e.g., 42)..."
-                  className="w-full bg-transparent text-[16px] md:text-[18px] text-on-surface placeholder:text-outline outline-none font-mono font-medium"
-                />
-                {inputValue && (
-                  <button
-                    onClick={() => setInputValue('')}
-                    className="text-outline hover:text-on-surface p-1 cursor-pointer"
-                    title="Clear"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">cancel</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Tactile Action Button Matrix (Large, Easy to Click) */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {/* PUSH */}
+              {/* 2-Column Grid of Large Action Buttons (Exact Reference Match) */}
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-1">
+                
+                {/* 1. Push Button (Vibrant Blue) */}
                 <button
-                  onClick={handlePush}
+                  onClick={() => handlePush()}
                   disabled={loading}
-                  className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-primary text-on-primary text-[16px] md:text-[17px] font-bold shadow-md hover:brightness-110 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                  className="bg-[#2563eb] hover:bg-[#1d4ed8] active:bg-[#1e40af] text-white rounded-2xl py-4 sm:py-5 flex flex-col items-center justify-center font-bold text-base sm:text-lg shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
                 >
-                  <span className="material-symbols-outlined text-[22px]">add_circle</span>
-                  <span>Push{inputValue ? ` (${inputValue})` : ''}</span>
+                  <span className="text-2xl font-bold leading-none mb-1">+</span>
+                  <span>Push</span>
                 </button>
 
-                {/* POP */}
+                {/* 2. Pop Button (Vibrant Red) */}
                 <button
                   onClick={handlePop}
                   disabled={loading || currentSize === 0}
-                  className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-error-container text-on-error-container text-[16px] md:text-[17px] font-bold hover:opacity-90 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="bg-[#dc2626] hover:bg-[#b91c1c] active:bg-[#991b1b] text-white rounded-2xl py-4 sm:py-5 flex flex-col items-center justify-center font-bold text-base sm:text-lg shadow-md shadow-red-500/20 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <span className="material-symbols-outlined text-[22px]">delete_sweep</span>
+                  <span className="text-2xl font-bold leading-none mb-1">−</span>
                   <span>Pop</span>
                 </button>
 
-                {/* UNDO */}
+                {/* 3. Undo Button (Vibrant Emerald Green) */}
                 <button
                   onClick={handleUndo}
                   disabled={loading || stackData.undoCount === 0}
-                  className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-secondary/15 text-secondary border border-secondary/40 text-[16px] md:text-[17px] font-bold hover:bg-secondary/25 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="bg-[#10b981] hover:bg-[#059669] active:bg-[#047857] text-white rounded-2xl py-4 sm:py-5 flex flex-col items-center justify-center font-bold text-base sm:text-lg shadow-md shadow-emerald-500/20 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <span className="material-symbols-outlined text-[22px]">undo</span>
-                  <span>Undo ({stackData.undoCount})</span>
+                  <span className="material-symbols-outlined text-[24px] leading-none mb-1">undo</span>
+                  <span>Undo</span>
                 </button>
 
-                {/* REDO */}
+                {/* 4. Redo Button (Vibrant Purple) */}
                 <button
                   onClick={handleRedo}
                   disabled={loading || stackData.redoCount === 0}
-                  className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-tertiary-container/20 text-tertiary border border-tertiary/40 text-[16px] md:text-[17px] font-bold hover:bg-tertiary-container/30 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="bg-[#8b5cf6] hover:bg-[#7c3aed] active:bg-[#6d28d9] text-white rounded-2xl py-4 sm:py-5 flex flex-col items-center justify-center font-bold text-base sm:text-lg shadow-md shadow-purple-500/20 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <span className="material-symbols-outlined text-[22px]">redo</span>
-                  <span>Redo ({stackData.redoCount})</span>
+                  <span className="material-symbols-outlined text-[24px] leading-none mb-1">redo</span>
+                  <span>Redo</span>
                 </button>
+
               </div>
+            </div>
+
+            {/* Last Operation Panel */}
+            <div className="bg-[#eff6ff] dark:bg-[#172554]/40 border border-[#bfdbfe] dark:border-[#1e3a8a] rounded-3xl p-5 shadow-xs">
+              <div className="flex items-center justify-between mb-1.5">
+                <h4 className="text-base sm:text-lg font-bold text-[#1d4ed8] dark:text-[#93c5fd]">
+                  Last operation
+                </h4>
+                <span className="text-xs font-mono text-blue-600 dark:text-blue-400">
+                  {lastOperation.time}
+                </span>
+              </div>
+              <p className="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-200">
+                {lastOperation.message}
+              </p>
             </div>
 
           </div>
 
-          {/* =========================================================
-              RIGHT COLUMN: Telemetry Log & Engine State (5 cols)
-              ========================================================= */}
-          <div className="lg:col-span-5 flex flex-col p-5 md:p-6 rounded-2xl bg-surface-container border border-surface-container-high shadow-sm">
+          {/* =================================================================
+              SECONDARY COLUMN: Real-Time Telemetry, Memory Stats & Diff Audit (Preserved)
+              ================================================================= */}
+          <div className={`lg:col-span-5 flex flex-col gap-6 ${mobileTab !== 'telemetry' ? 'hidden lg:flex' : 'flex'}`}>
             
-            {/* Right Panel Tabs Header */}
-            <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-surface-container-high shrink-0">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setRightPanelTab('telemetry')}
-                  className={`px-3 py-1.5 rounded-lg font-mono text-[14px] md:text-[15px] font-bold transition-colors cursor-pointer ${
-                    rightPanelTab === 'telemetry'
-                      ? 'bg-secondary/15 text-secondary border border-secondary/40'
-                      : 'text-on-surface-variant hover:text-on-surface'
-                  }`}
-                >
-                  Telemetry Log
-                </button>
-                <button
-                  onClick={() => setRightPanelTab('memory')}
-                  className={`px-3 py-1.5 rounded-lg font-mono text-[14px] md:text-[15px] font-bold transition-colors cursor-pointer ${
-                    rightPanelTab === 'memory'
-                      ? 'bg-primary/15 text-primary border border-primary/40'
-                      : 'text-on-surface-variant hover:text-on-surface'
-                  }`}
-                >
-                  Memory Stats
-                </button>
-                <button
-                  onClick={() => setRightPanelTab('diff')}
-                  className={`px-3 py-1.5 rounded-lg font-mono text-[14px] md:text-[15px] font-bold transition-colors cursor-pointer ${
-                    rightPanelTab === 'diff'
-                      ? 'bg-tertiary/15 text-tertiary border border-tertiary/40'
-                      : 'text-on-surface-variant hover:text-on-surface'
-                  }`}
-                >
-                  Diff Audit
-                </button>
-              </div>
-
-              <div className="flex items-center gap-1.5 font-mono text-secondary text-[13px] font-bold">
-                <span className="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_#0891b2] animate-pulse"></span>
-                <span>STREAM ACTIVE</span>
-              </div>
-            </div>
-
-            {/* TAB 1: Live Telemetry Event Log */}
-            {rightPanelTab === 'telemetry' && (
-              <div className="flex flex-col">
-                <div className="flex items-center justify-between text-[14px] font-mono text-outline pb-3 shrink-0 font-medium">
-                  <span>Recent Events ({stackData.logs?.length || 0} recorded)</span>
-                  <span>O(1) Engine Stream</span>
+            {/* Telemetry Panel Container */}
+            <div className="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col">
+              
+              {/* Header with Switcher Tabs */}
+              <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setRightPanelTab('telemetry')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      rightPanelTab === 'telemetry'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Telemetry Log
+                  </button>
+                  <button
+                    onClick={() => setRightPanelTab('memory')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      rightPanelTab === 'memory'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Memory Stats
+                  </button>
+                  <button
+                    onClick={() => setRightPanelTab('diff')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      rightPanelTab === 'diff'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Diff Audit
+                  </button>
                 </div>
 
-                <div className="flex flex-col gap-2.5 max-h-[580px] overflow-y-auto pr-1.5 custom-scrollbar">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="hidden sm:inline">LIVE</span>
+                </div>
+              </div>
+
+              {/* TAB 1: Telemetry Log */}
+              {rightPanelTab === 'telemetry' && (
+                <div className="flex flex-col">
+                  <div className="flex items-center justify-between text-xs font-mono text-slate-400 pb-2.5">
+                    <span>Events ({stackData.logs?.length || 0})</span>
+                    <span>O(1) C++ Native</span>
+                  </div>
+
+                  <div className="flex flex-col gap-2 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
+                    {stackData.logs && stackData.logs.length > 0 ? (
+                      stackData.logs.map((log) => (
+                        <div
+                          key={log.id}
+                          className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-100 dark:border-slate-800 text-xs font-mono"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-slate-400 shrink-0">{log.time}</span>
+                            <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold shrink-0 ${
+                              log.type === 'PUSH' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' :
+                              log.type === 'POP' ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300' :
+                              log.type === 'UNDO' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' :
+                              log.type === 'REDO' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300' :
+                              'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                            }`}>
+                              {log.type}
+                            </span>
+                            <span className="text-slate-700 dark:text-slate-300 font-medium truncate">
+                              {log.message}
+                            </span>
+                          </div>
+                          <span className="text-slate-500 font-bold shrink-0 ml-2">
+                            {log.metric}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400 text-xs font-mono">
+                        <span className="material-symbols-outlined text-[28px] mb-1">history</span>
+                        <span>No telemetry events yet.</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: Memory Profiler */}
+              {rightPanelTab === 'memory' && (
+                <div className="flex flex-col space-y-3 text-xs font-mono max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-100 dark:border-slate-800">
+                    <div className="text-blue-600 dark:text-blue-400 font-bold text-sm mb-2">Vector Stack (`std::vector&lt;int&gt;`)</div>
+                    <div className="space-y-1.5 text-slate-600 dark:text-slate-300">
+                      <div>• Capacity: <strong className="text-slate-900 dark:text-white">5 slots</strong></div>
+                      <div>• Active Count: <strong className="text-slate-900 dark:text-white">{currentSize}</strong></div>
+                      <div>• Free Slots: <strong className="text-slate-900 dark:text-white">{freeSlots}</strong></div>
+                      <div>• Contiguous Buffer: <strong className="text-emerald-600 dark:text-emerald-400">O(1) access</strong></div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-100 dark:border-slate-800">
+                    <div className="text-emerald-600 dark:text-emerald-400 font-bold text-sm mb-2">Dual Snapshot Stack Memory</div>
+                    <div className="space-y-1.5 text-slate-600 dark:text-slate-300">
+                      <div>• Undo Stack: <strong className="text-slate-900 dark:text-white">{stackData.undoCount} vectors</strong></div>
+                      <div>• Redo Stack: <strong className="text-slate-900 dark:text-white">{stackData.redoCount} vectors</strong></div>
+                      <div>• Restoration Speed: <strong className="text-slate-900 dark:text-white">&lt; 0.05 ms</strong></div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-100 dark:border-slate-800">
+                    <div className="text-purple-600 dark:text-purple-400 font-bold text-sm mb-2">Raw Stack Vector</div>
+                    <div className="bg-white dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-bold">
+                      [{stackElements.join(', ')}]
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: Diff Audit */}
+              {rightPanelTab === 'diff' && (
+                <div className="flex flex-col space-y-2 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
                   {stackData.logs && stackData.logs.length > 0 ? (
                     stackData.logs.map((log) => (
                       <div
-                        key={log.id}
-                        className="flex items-center justify-between p-3.5 rounded-xl bg-surface-container-low hover:bg-surface-container-high/60 transition-colors border border-surface-container-high text-[14px] font-mono"
+                        key={`diff-${log.id}`}
+                        className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/70 border border-slate-100 dark:border-slate-800 text-xs font-mono"
                       >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="text-outline text-[13px] shrink-0 font-medium">{log.time}</span>
-                          <span className={`px-2 py-0.5 rounded text-[12px] font-bold shrink-0 ${log.badgeClass}`}>
-                            {log.type}
-                          </span>
-                          <span className="text-on-surface text-[14px] md:text-[15px] font-medium truncate">
-                            {log.message}
-                          </span>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-slate-400">{log.time}</span>
+                          <span className="font-bold text-slate-500">{log.metric}</span>
                         </div>
-                        <span className={`text-[13px] shrink-0 ml-2 font-bold ${log.metricClass}`}>
-                          {log.metric}
-                        </span>
+                        <div className="text-slate-800 dark:text-slate-200 font-semibold">{log.message}</div>
                       </div>
                     ))
                   ) : (
-                    <div className="flex flex-col items-center justify-center p-10 text-center text-outline text-[15px] font-mono">
-                      <span className="material-symbols-outlined text-[32px] mb-2">history</span>
-                      <span>No events recorded yet</span>
-                      <span className="text-[13px] text-outline/80 mt-1">Perform a Push or Pop to view live operations</span>
+                    <div className="p-8 text-center text-slate-400 text-xs font-mono">
+                      No diff audit logs yet.
                     </div>
                   )}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* TAB 2: Memory Breakdown Stats */}
-            {rightPanelTab === 'memory' && (
-              <div className="flex flex-col space-y-4 text-[15px] font-mono max-h-[580px] overflow-y-auto pr-1.5 custom-scrollbar">
-                <div className="p-4 rounded-xl bg-surface-container-low border border-surface-container-high">
-                  <div className="text-primary font-bold text-[16px] mb-2">Vector Stack Memory (`s`)</div>
-                  <div className="space-y-2 text-on-surface-variant text-[14px] md:text-[15px]">
-                    <div>• Maximum Capacity: <strong className="text-on-surface">5 items</strong></div>
-                    <div>• Allocated Elements: <strong className="text-on-surface">{currentSize}</strong></div>
-                    <div>• Memory per Node: <strong className="text-on-surface">4 Bytes (int32)</strong></div>
-                    <div>• Active Footprint: <strong className="text-on-surface">{currentSize * 4} Bytes</strong></div>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-surface-container-low border border-surface-container-high">
-                  <div className="text-secondary font-bold text-[16px] mb-2">Undo/Redo Subsystem</div>
-                  <div className="space-y-2 text-on-surface-variant text-[14px] md:text-[15px]">
-                    <div>• Undo History Depth: <strong className="text-on-surface">{stackData.undoCount} states</strong></div>
-                    <div>• Redo Branch Depth: <strong className="text-on-surface">{stackData.redoCount} states</strong></div>
-                    <div>• State Snapshot Complexity: <strong className="text-on-surface">O(k) copy</strong></div>
-                    <div>• Traversal Operation: <strong className="text-on-surface">O(1) pointer swap</strong></div>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-surface-container-low border border-surface-container-high">
-                  <div className="text-tertiary font-bold text-[16px] mb-2">Current Vector State Buffer</div>
-                  <div className="bg-surface-container-lowest p-3 rounded-lg border border-surface-container-high text-[15px] text-on-surface font-bold">
-                    [{stackElements.join(', ')}]
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 3: Diff Audit Log */}
-            {rightPanelTab === 'diff' && (
-              <div className="flex flex-col space-y-2.5 max-h-[580px] overflow-y-auto pr-1.5 custom-scrollbar">
-                {stackData.logs && stackData.logs.length > 0 ? (
-                  stackData.logs.map((log) => (
-                    <div
-                      key={`diff-${log.id}`}
-                      className="p-3.5 rounded-xl bg-surface-container-low border border-surface-container-high font-mono text-[14px]"
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-outline text-[13px]">{log.time}</span>
-                          <span className={`px-2 py-0.5 rounded text-[12px] font-bold ${log.badgeClass}`}>{log.type}</span>
-                        </div>
-                        <span className={`text-[13px] font-bold ${log.metricClass}`}>{log.metric}</span>
-                      </div>
-                      <div className="text-on-surface font-medium text-[15px]">{log.message}</div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex items-center justify-center p-8 text-outline font-mono text-[15px]">
-                    No diff audit logs available.
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Right Panel Footer */}
-            <div className="pt-3.5 mt-4 border-t border-surface-container-high flex items-center justify-between text-[13px] font-mono text-outline shrink-0">
-              <span>C++ Engine Subsystem Active</span>
-              <span className="text-secondary font-bold">O(1) OPT</span>
             </div>
+
+            {/* Quick Engine Architecture Summary */}
+            <div className="bg-slate-100 dark:bg-[#131b2e]/60 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 text-xs text-slate-500 dark:text-slate-400 space-y-2">
+              <div className="flex items-center justify-between text-slate-700 dark:text-slate-300 font-bold">
+                <span>C++ Native Engine</span>
+                <span className="text-blue-600 dark:text-blue-400 font-mono">Capacity: 5</span>
+              </div>
+              <p>
+                Strict bounds enforcement prevent buffer overflows and ensure constant time $O(1)$ operations with zero garbage collection pauses.
+              </p>
+            </div>
+
           </div>
 
         </div>
+
       </main>
 
-      {/* Modals */}
+      {/* Reusable Modals */}
       {showDocModal && renderDocModal()}
-      {showSettingsModal && renderSettingsModal()}
     </div>
   );
 }

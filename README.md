@@ -4,16 +4,22 @@ A simple, fully functional web application demonstrating an **Undo–Redo Engine
 
 ---
 
-## 📸 Design & UI Reference
-The frontend directly replicates the Google Stitch Dark Cyberpunk design specification with:
-- **Single-Screen Dashboard**: Fits cleanly within a single viewport without vertical scrolling on desktop.
-- **Side-by-Side Ergonomic Layout**:
-  - **Left Section**: Stack Visualizer tube (`TOP` & `BOTTOM` pointer nodes, unallocated capacity buffer) and Command Dispatcher (custom integer input with Push, Pop, Undo, Redo, and Reset Stack).
-  - **Right Section**: Dedicated Telemetry Log with internal scrolling, live `STREAM ACTIVE` pulse, and tab switchers for **Telemetry Log**, **Memory Stats**, and **Diff Audit**.
-- **Compact Bento Metric Bar**: 4-card header overview tracking **Stack Load** (`x / 5`), **Buffer Free** (`%`), **Undo Depth** (reversible states), and **Redo Branch** (cached forward states).
-- **Default Light Mode & Dynamic Theme Toggle**: Clean white background (`#ffffff`), light-grey cards (`#f8fafc`), readable dark text (`#0f172a`), with vibrant purple (`#7c3aed`) and cyan (`#0891b2`) accents, plus navbar toggle for the original cyberpunk Dark Mode.
-- **Single-Screen Welcome Page**: First-launch overview with an architectural stack illustration and **Get Started** button (remembered per session via `sessionStorage`).
-- **Underflow & Overflow Protection**: Real-time visual banners when attempting to push beyond capacity (5 elements) or pop an empty stack.
+## 📸 Design & UI Reference: StackFlow Playground
+The frontend implements the modern **StackFlow** UI specification:
+- **Header**: StackFlow branding, live `Ready` status badge, theme toggle, and quick reset.
+- **Top Statistic Cards**: 3 prominent cards tracking **Stack Size**, **Undo Available**, and **Redo Available** with custom color-coded styling.
+- **Stack Visualization**:
+  - Vertical stack blocks rendered top-to-bottom with vibrant colors:
+    - **Top element**: Highlighted in vibrant **Orange** with an active **TOP** label.
+    - **Middle elements**: Rendered in distinct **Blue**, **Green**, **Purple**, and **Pink** blocks.
+    - **Bottom of Stack**: Anchored with a dedicated **Bottom of stack** label.
+    - *"Elements are displayed from top to bottom."* caption.
+- **Perform an Operation**:
+  - Custom integer payload input with quick preset buttons (`+10`, `+20`, `+30`, `+42`, `+99`) and Enter key support.
+  - Large, tactile 2-column action button grid: **Push** (Blue), **Pop** (Red), **Undo** (Green), **Redo** (Purple).
+- **Last Operation Card**: Real-time status container displaying operation outcomes, timestamps, and C++ engine diagnostics.
+- **Live Telemetry & Diagnostics**: Dedicated side panel for **Telemetry Log**, **Memory Profiler**, and **Diff Audit**.
+- **Dual Themes**: Polished Light Theme matching the reference screenshot and high-contrast Dark Theme.
 
 ---
 
