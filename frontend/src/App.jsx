@@ -2,25 +2,30 @@ import React, { useState, useEffect } from 'react';
 
 // Dynamic API Base URL configuration:
 // - Uses VITE_API_URL or VITE_API_BASE_URL environment variable if set (configured in Vercel).
-// - In local development or same-domain deployments, uses relative path.
-// - If deployed separately (e.g., Vercel), defaults to the live Render backend URL.
+// - Automatically normalizes URLs whether provided with or without '/api'.
+// - In local development, uses '/api' (proxied by Vite).
+// - If deployed separately (e.g., Vercel), defaults to 'https://undo-redo-engine.onrender.com/api'.
 const getApiBase = () => {
   const envUrl = (typeof import.meta !== 'undefined' && import.meta.env)
     ? (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL)
     : null;
 
   if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
-    return envUrl.trim().replace(/\/+$/, '');
+    let clean = envUrl.trim().replace(/\/+$/, '');
+    if (!clean.endsWith('/api')) {
+      clean += '/api';
+    }
+    return clean;
   }
 
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1' || host.includes('undo-redo-engine.onrender.com')) {
-      return '';
+      return '/api';
     }
   }
 
-  return 'https://undo-redo-engine.onrender.com';
+  return 'https://undo-redo-engine.onrender.com/api';
 };
 
 const API_BASE = getApiBase();
