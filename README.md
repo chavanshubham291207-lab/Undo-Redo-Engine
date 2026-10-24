@@ -4,6 +4,27 @@ A simple, fully functional web application demonstrating an **Undo–Redo Engine
 
 ---
 
+## 🌟 Redesigned Landing Page: StackFlow
+The application features a modern, responsive landing page:
+- **Two-Column Hero Section**:
+  - **Badge**: `DSA ENGINE • C++ CORE • O(1) STACK OPERATIONS` with live pulsing indicator.
+  - **Headline**: *"Every Action. Reversible."*
+  - **Subtitle**: *"Explore stack operations, undo-redo history, and memory-efficient state management powered by a C++ engine."*
+  - **Action Buttons**: Primary **Launch Playground** (direct entry into dashboard) and secondary **Explore Features** (smooth scroll to engine capabilities).
+- **Live-Style Stack Preview Card**:
+  - Capacity indicator (`Capacity: 3 / 5`).
+  - Mini Undo/Redo status cards (`Undo Avail: 2`, `Redo Avail: 1`).
+  - Colorful stack blocks (Orange Top `30`, Blue `20`, Green `10`, and grounded bottom indicator).
+- **Engine Capabilities (3 Feature Cards)**:
+  - **Stack Operations**: Amortized $O(1)$ push/pop on a bounded vector buffer with strict overflow/underflow checks.
+  - **Undo & Redo History**: Instant dual-stack state snapshots without memory corruption.
+  - **Memory-Efficient C++ Core**: Native compiled `engine.cpp` binary executing via pipes with zero garbage collection overhead.
+- **Theme & Navigation**:
+  - Sticky top header with branding, theme toggle (Light/Dark mode), and quick **Get Started** button.
+  - Fits within desktop viewport with fluid mobile responsiveness.
+
+---
+
 ## 📸 Design & UI Reference: StackFlow Playground
 The frontend implements the modern **StackFlow** UI specification:
 - **Header**: StackFlow branding, live `Ready` status badge, theme toggle, and quick reset.
