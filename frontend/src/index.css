@@ -1,0 +1,103 @@
+/* Theme Variable Definitions */
+:root, html.light {
+  --bg-app: #f8fafc;
+  --surface-container: #ffffff;
+  --surface-container-low: #f1f5f9;
+  --surface-container-high: #e2e8f0;
+  --surface-container-highest: #cbd5e1;
+  --surface-container-lowest: #ffffff;
+  --surface-dim: rgba(255, 255, 255, 0.95);
+  --on-surface: #0f172a;
+  --on-surface-variant: #475569;
+  --outline: #64748b;
+  --outline-variant: #cbd5e1;
+  --primary: #7c3aed;
+  --primary-container: #8b5cf6;
+  --primary-fixed-dim: #6d28d9;
+  --on-primary: #ffffff;
+  --secondary: #0891b2;
+  --secondary-fixed-dim: #0e7490;
+  --tertiary: #2563eb;
+  --tertiary-container: #3b82f6;
+  --error-container: #fee2e2;
+  --on-error-container: #991b1b;
+  --error: #ef4444;
+  --surface-bright: #e2e8f0;
+  --border-subtle: rgba(226, 232, 240, 0.9);
+  --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+}
+
+html.dark {
+  --bg-app: #0f131c;
+  --surface-container: #1c1f29;
+  --surface-container-low: #181b25;
+  --surface-container-high: #262a34;
+  --surface-container-highest: #31353f;
+  --surface-container-lowest: #0a0e17;
+  --surface-dim: rgba(15, 19, 28, 0.92);
+  --on-surface: #dfe2ef;
+  --on-surface-variant: #cfc2d6;
+  --outline: #988d9f;
+  --outline-variant: #4d4354;
+  --primary: #ddb7ff;
+  --primary-container: #b76dff;
+  --primary-fixed-dim: #ddb7ff;
+  --on-primary: #490080;
+  --secondary: #4cd7f6;
+  --secondary-fixed-dim: #4cd7f6;
+  --tertiary: #adc6ff;
+  --tertiary-container: #4d8eff;
+  --error-container: #93000a;
+  --on-error-container: #ffdad6;
+  --error: #ffb4ab;
+  --surface-bright: #353943;
+  --border-subtle: rgba(49, 53, 63, 0.6);
+  --card-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.5);
+}
+
+/* Custom utilities & micro-animations */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pop-in {
+  animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom sleek scrollbar for Telemetry Log */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--surface-container-high);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--outline);
+}

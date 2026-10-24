@@ -1,0 +1,13 @@
+{
+  "name": "undo-redo-backend",
+  "version": "1.0.0",
+  "description": "Node.js Express backend bridging to C++ Undo-Redo Engine",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}
