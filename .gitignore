@@ -17,5 +17,5 @@ yarn-error.log*
 .env.local
 .vscode/
 .idea/
-.DS_Store
-Thumbs.db
+# Binaries
+backend/cpp/engine

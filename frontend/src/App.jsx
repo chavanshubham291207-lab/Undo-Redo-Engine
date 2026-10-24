@@ -1,6 +1,29 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE = '/api';
+// Dynamic API Base URL configuration:
+// - Uses VITE_API_BASE_URL or VITE_API_URL environment variable if set.
+// - In local development or same-domain deployments, uses relative '/api'.
+// - If deployed separately (e.g., Vercel, Netlify, GitHub Pages), falls back to the live Render backend URL.
+const getApiBase = () => {
+  const envUrl = (typeof import.meta !== 'undefined' && import.meta.env)
+    ? (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL)
+    : null;
+
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, '');
+  }
+
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || host.includes('undo-redo-engine.onrender.com')) {
+      return '/api';
+    }
+  }
+
+  return 'https://undo-redo-engine.onrender.com/api';
+};
+
+const API_BASE = getApiBase();
 
 export default function App() {
   const [theme, setTheme] = useState(() => {

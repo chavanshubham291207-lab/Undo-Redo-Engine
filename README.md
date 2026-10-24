@@ -107,12 +107,28 @@ npm run dev
 
 ---
 
+## 🚀 Render Deployment Guide
+
+- **Live URL**: [https://undo-redo-engine.onrender.com](https://undo-redo-engine.onrender.com)
+- **Status Endpoint**: `GET /` (returns an HTML status page or JSON status confirming the backend is running)
+- **API Health**: `GET /api/health`
+
+### Render Configuration
+- **Build Command**: `npm run build` (or `npm install`)
+- **Start Command**: `npm start` (or `node backend/server.js`)
+- **Environment**: Linux Native Web Service (`process.env.PORT` automatically bound to `0.0.0.0`)
+- **C++ Engine**: Auto-compiled with `g++ -O2` on Linux (`backend/cpp/engine`) and Windows (`backend/cpp/engine.exe`).
+- **Separate Frontend**: Set environment variable `VITE_API_BASE_URL=https://undo-redo-engine.onrender.com/api` on Vercel/Netlify.
+
+---
+
 ## 🧪 Testing Checklist
-1. **Push**: Enter any integer into the input field and click **Push** (or press Enter). The node appears with a glowing **TOP** label.
-2. **Multiple Pushes**: Push up to 5 elements. The bottom node receives the **BOTTOM** anchor label.
-3. **Stack Overflow**: Try to push a 6th element. An alert banner appears and the operation is rejected.
-4. **Undo**: Click **Undo**. The previous state is restored and the Redo counter increments.
-5. **Redo**: Click **Redo**. The reverted state is re-applied forward.
-6. **Pop**: Click **Pop** until empty.
-7. **Stack Underflow**: Click **Pop** when the stack is empty to test underflow rejection.
-8. **Tabs**: Click **Diff Log** or **Memory Stats** in the bottom navigation bar to inspect execution history and memory allocations.
+1. **Status Page**: Visit `/` to see the live project and engine status dashboard.
+2. **Push**: Enter any integer into the input field and click **Push** (or press Enter). The node appears with a glowing **TOP** label.
+3. **Multiple Pushes**: Push up to 5 elements. The bottom node receives the **BOTTOM** anchor label.
+4. **Stack Overflow**: Try to push a 6th element. An alert banner appears and the operation is rejected.
+5. **Undo**: Click **Undo**. The previous state is restored and the Redo counter increments.
+6. **Redo**: Click **Redo**. The reverted state is re-applied forward.
+7. **Pop**: Click **Pop** until empty.
+8. **Stack Underflow**: Click **Pop** when the stack is empty to test underflow rejection.
+9. **Tabs**: Click **Diff Log** or **Memory Stats** in the bottom navigation bar to inspect execution history and memory allocations.

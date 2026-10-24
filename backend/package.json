@@ -4,7 +4,10 @@
   "description": "Node.js Express backend bridging to C++ Undo-Redo Engine",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build:cpp": "node compile-engine.js",
+    "build": "node compile-engine.js",
+    "postinstall": "node compile-engine.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
