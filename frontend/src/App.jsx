@@ -309,17 +309,21 @@ export default function App() {
   /* =========================================================================
      1. WELCOME / LANDING PAGE VIEW
      ========================================================================= */
+  /* =========================================================================
+     1. REDESIGNED STACKFLOW LANDING PAGE VIEW
+     ========================================================================= */
   if (showWelcome) {
     return (
       <div className="min-h-screen flex flex-col justify-between bg-slate-50 dark:bg-[#0b0f17] text-slate-900 dark:text-slate-100 antialiased transition-colors duration-200">
-        {/* Welcome Top Navbar */}
-        <header className="h-14 shrink-0 w-full bg-white/80 dark:bg-[#131b2e]/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 md:px-8 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-500/20 text-white">
+        
+        {/* Top Navbar */}
+        <header className="h-16 shrink-0 w-full bg-white/85 dark:bg-[#131b2e]/85 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 md:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-500/20 text-white">
               <span className="material-symbols-outlined text-[22px]">layers</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+              <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                 StackFlow
               </span>
               <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -328,83 +332,245 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
+            {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
               title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200 dark:border-slate-800"
+              className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px]">
+              <span className="material-symbols-outlined text-[20px]">
                 {theme === 'dark' ? 'light_mode' : 'dark_mode'}
               </span>
             </button>
 
+            {/* Top Get Started Button */}
             <button
               onClick={handleGetStarted}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all cursor-pointer"
             >
               <span>Get Started</span>
-              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+              <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
             </button>
           </div>
         </header>
 
-        {/* Central Viewport Content */}
-        <main className="flex-1 flex flex-col justify-center items-center px-4 py-6 max-w-4xl mx-auto w-full gap-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-semibold uppercase tracking-wider">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse"></span>
-            <span>Data Structures &amp; Algorithms Engine</span>
-            <span>•</span>
-            <span className="font-bold">O(1) C++ Core</span>
+        {/* Central Content: Hero + Compact Features */}
+        <main className="flex-1 flex flex-col justify-center max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-10 gap-10">
+          
+          {/* Balanced Two-Column Hero Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            
+            {/* Left Column: Headline, Subtitle, Badges & Action CTAs */}
+            <div className="lg:col-span-7 flex flex-col items-start gap-4 sm:gap-5 text-left">
+              
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-bold tracking-wider uppercase shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse"></span>
+                <span>DSA ENGINE • C++ CORE • O(1) STACK OPERATIONS</span>
+              </div>
+
+              {/* Headline */}
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.12]">
+                Every Action. <br/>
+                <span className="text-blue-600 dark:text-blue-400">Reversible.</span>
+              </h1>
+
+              {/* Subtitle */}
+              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-xl leading-relaxed">
+                Explore stack operations, undo-redo history, and memory-efficient state management powered by a C++ engine.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                {/* Primary Button */}
+                <button
+                  onClick={handleGetStarted}
+                  className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-base shadow-lg shadow-blue-500/25 transition-all cursor-pointer"
+                >
+                  <span>Launch Playground</span>
+                  <span className="material-symbols-outlined text-[20px]">rocket_launch</span>
+                </button>
+
+                {/* Secondary Button: Smoothly scrolls to features */}
+                <button
+                  onClick={() => {
+                    const el = document.getElementById('features-section');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="flex items-center gap-1.5 px-6 py-3.5 rounded-2xl bg-white dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-[0.98] text-slate-700 dark:text-slate-200 font-bold text-base border border-slate-200 dark:border-slate-700 shadow-xs transition-all cursor-pointer"
+                >
+                  <span>Explore Features</span>
+                  <span className="material-symbols-outlined text-[20px]">expand_more</span>
+                </button>
+              </div>
+
+              {/* Highlights List */}
+              <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 dark:text-slate-400 pt-1 flex-wrap">
+                <span className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-emerald-500 text-[18px]">check_circle</span>
+                  Contiguous 5-Slot Capacity
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-blue-500 text-[18px]">check_circle</span>
+                  Bidirectional State Reversal
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-purple-500 text-[18px]">check_circle</span>
+                  Native C++ Execution
+                </span>
+              </div>
+
+            </div>
+
+            {/* Right Column: Live-Style Stack Preview Card */}
+            <div className="lg:col-span-5 flex flex-col items-center w-full">
+              <div className="w-full max-w-md bg-white dark:bg-[#131b2e] rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-xl space-y-3.5">
+                
+                {/* Preview Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-blue-600 text-[20px]">layers</span>
+                    <span className="font-extrabold text-slate-800 dark:text-slate-200 text-sm">Stack Buffer Preview</span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-xs font-bold font-mono">
+                    Capacity: 3 / 5
+                  </span>
+                </div>
+
+                {/* Mini Status Cards */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-900/60 flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300">Undo Avail</span>
+                    <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">2</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200/60 dark:border-purple-900/60 flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-purple-800 dark:text-purple-300">Redo Avail</span>
+                    <span className="text-base font-extrabold text-purple-600 dark:text-purple-400 font-mono">1</span>
+                  </div>
+                </div>
+
+                {/* Colorful Stack Blocks in Live Order (TOP to BOTTOM) */}
+                <div className="space-y-2 pt-1">
+                  {/* Top Block (Orange) */}
+                  <div className="py-2.5 px-4 rounded-xl bg-[#f97316] text-white flex items-center justify-between font-bold text-base shadow-xs">
+                    <span className="tracking-tight font-mono font-extrabold text-lg">30</span>
+                    <span className="text-[10px] bg-black/20 text-white px-2 py-0.5 rounded-md uppercase font-extrabold tracking-wider">
+                      TOP
+                    </span>
+                  </div>
+
+                  {/* 2nd Block (Blue) */}
+                  <div className="py-2.5 px-4 rounded-xl bg-[#2563eb] text-white font-bold text-base shadow-xs flex items-center justify-between">
+                    <span className="tracking-tight font-mono font-extrabold text-lg">20</span>
+                  </div>
+
+                  {/* 3rd Block (Green) */}
+                  <div className="py-2.5 px-4 rounded-xl bg-[#10b981] text-white font-bold text-base shadow-xs flex items-center justify-between">
+                    <span className="tracking-tight font-mono font-extrabold text-lg">10</span>
+                  </div>
+
+                  {/* Bottom of Stack Label */}
+                  <div className="py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 text-center font-bold text-xs border border-slate-200/70 dark:border-slate-700/70">
+                    Bottom of stack
+                  </div>
+                </div>
+
+                {/* Caption Underneath */}
+                <p className="text-center text-xs text-slate-400 dark:text-slate-500 font-medium">
+                  Elements are displayed from top to bottom.
+                </p>
+
+                {/* Direct CTA */}
+                <button
+                  onClick={handleGetStarted}
+                  className="w-full mt-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+                >
+                  Interactive Playground →
+                </button>
+              </div>
+            </div>
+
           </div>
 
-          <div className="text-center max-w-2xl">
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
-              Memory-Efficient <br/>
-              <span className="text-blue-600 dark:text-blue-400">StackFlow Engine</span>
-            </h1>
-            <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-              Interactive visualization of reversible state management. Built on contiguous C++ stack logic 
-              with $O(1)$ operations, dual history branches, and strict 5-slot capacity bounds.
-            </p>
-          </div>
-
-          {/* Quick Preview Card */}
-          <div className="w-full max-w-sm bg-white dark:bg-[#131b2e] rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xl space-y-2.5">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-              <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">StackFlow Playground Preview</span>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold">
-                Ready
+          {/* Compact Features Section with 3 Cards */}
+          <div id="features-section" className="pt-6 border-t border-slate-200/80 dark:border-slate-800/80">
+            <div className="text-center mb-6">
+              <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+                Engine Capabilities
               </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1 tracking-tight">
+                Built on High-Performance DSA Architecture
+              </h2>
             </div>
 
-            <div className="space-y-1.5">
-              <div className="py-2.5 px-4 rounded-xl bg-[#f97316] text-white flex items-center justify-between font-bold text-base shadow-xs">
-                <span>30</span>
-                <span className="text-[11px] bg-white/20 px-2 py-0.5 rounded uppercase font-extrabold">TOP</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+              
+              {/* Feature 1: Stack Operations */}
+              <div className="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3.5">
+                    <span className="material-symbols-outlined text-[22px]">layers</span>
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1.5">
+                    Stack Operations
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Constant-time O(1) Push and Pop operations operating on a contiguous vector buffer with strict capacity bounding (5 slots) and underflow/overflow protection.
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-mono font-bold text-blue-600 dark:text-blue-400">
+                  <span>Push / Pop</span>
+                  <span>Amortized O(1)</span>
+                </div>
               </div>
-              <div className="py-2.5 px-4 rounded-xl bg-[#2563eb] text-white font-bold text-base shadow-xs">
-                <span>20</span>
-              </div>
-              <div className="py-2.5 px-4 rounded-xl bg-[#10b981] text-white font-bold text-base shadow-xs">
-                <span>10</span>
-              </div>
-              <div className="py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 text-center font-semibold text-xs border border-slate-200 dark:border-slate-700">
-                Bottom of stack
-              </div>
-            </div>
 
-            <button
-              onClick={handleGetStarted}
-              className="w-full mt-2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/25 transition-all cursor-pointer"
-            >
-              Open Dashboard
-            </button>
+              {/* Feature 2: Undo & Redo History */}
+              <div className="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3.5">
+                    <span className="material-symbols-outlined text-[22px]">history</span>
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1.5">
+                    Undo &amp; Redo History
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Dual-stack architecture preserves state snapshots, enabling instant state reversion and forward branching without memory leaks or state corruption.
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  <span>Snapshots</span>
+                  <span>&lt; 0.02 ms Restore</span>
+                </div>
+              </div>
+
+              {/* Feature 3: Memory-Efficient C++ Core */}
+              <div className="bg-white dark:bg-[#131b2e] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-3.5">
+                    <span className="material-symbols-outlined text-[22px]">memory</span>
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1.5">
+                    Memory-Efficient C++ Core
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Powered by a native compiled C++ engine (<code className="font-mono text-purple-600 dark:text-purple-300">engine.cpp</code>), communicating via high-performance pipes with zero runtime garbage collection pauses.
+                  </p>
+                </div>
+                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-mono font-bold text-purple-600 dark:text-purple-400">
+                  <span>Binary</span>
+                  <span>Zero GC Overhead</span>
+                </div>
+              </div>
+
+            </div>
           </div>
+
         </main>
 
-        <footer className="py-3 text-center text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200 dark:border-slate-800">
-          Memory-Efficient Undo–Redo Engine • React + Node.js + C++
+        {/* Footer */}
+        <footer className="py-4 text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800">
+          Memory-Efficient Undo–Redo Engine • React + Node.js Express + Native C++
         </footer>
       </div>
     );
